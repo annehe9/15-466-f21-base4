@@ -1,3 +1,4 @@
+   
 #include "Mode.hpp"
 
 #include "Scene.hpp"
@@ -25,8 +26,9 @@ struct PlayMode : Mode {
 	struct Button {
 		uint8_t downs = 0;
 		uint8_t pressed = 0;
-	} left, right, down, up;
+	} down, up, enter;
 
+	// Dialog tree types
 	typedef struct Response {
 		int index;
 		std::string line;
@@ -39,6 +41,11 @@ struct PlayMode : Mode {
 	} Dialog;
 
 	std::vector< Dialog > dialog_tree;
+	int dialog_state;
+	int response_selection;
+
+	//local copy of the game scene (so code can change it during gameplay):
+	Scene scene;
 	
 	//camera:
 	Scene::Camera *camera = nullptr;
