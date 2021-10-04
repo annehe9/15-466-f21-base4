@@ -17,6 +17,8 @@ struct PlayMode : Mode {
 	virtual void update(float elapsed) override;
 	virtual void draw(glm::uvec2 const &drawable_size) override;
 
+	void load_dialog_tree(std::string path);
+
 	//----- game state -----
 
 	//input tracking:
@@ -25,22 +27,18 @@ struct PlayMode : Mode {
 		uint8_t pressed = 0;
 	} left, right, down, up;
 
-	//local copy of the game scene (so code can change it during gameplay):
-	Scene scene;
+	typedef struct Response {
+		int index;
+		std::string line;
+	} Response;
 
-	//hexapod leg to wobble:
-	Scene::Transform *hip = nullptr;
-	Scene::Transform *upper_leg = nullptr;
-	Scene::Transform *lower_leg = nullptr;
-	glm::quat hip_base_rotation;
-	glm::quat upper_leg_base_rotation;
-	glm::quat lower_leg_base_rotation;
-	float wobble = 0.0f;
+	typedef struct Dialog {
+		std::string line;
+		std::vector< Response > responses;
+		int mood;
+	} Dialog;
 
-	glm::vec3 get_leg_tip_position();
-
-	//music coming from the tip of the leg (as a demonstration):
-	std::shared_ptr< Sound::PlayingSample > leg_tip_loop;
+	std::vector< Dialog > dialog_tree;
 	
 	//camera:
 	Scene::Camera *camera = nullptr;
