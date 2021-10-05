@@ -38,6 +38,10 @@ https://github.com/ChunanGang/TextBasedGame
 
 https://github.com/lassyla/game4
 
+Cross platform SSCANF define referenced:
+
+https://www.gamedev.net/forums/topic/564260-sscanf_s-in-linux-ubuntu/
+
 
 This game was built with [NEST](NEST.md).
 
