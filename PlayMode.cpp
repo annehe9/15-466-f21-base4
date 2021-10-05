@@ -16,6 +16,19 @@
 #include <fstream>
 #include <string>
 
+// Mood indices
+// 0 George_happy
+// 1 George_neutral
+// 2 John_anger
+// 3 John_neutral
+// 4 Paul_closedeyes
+// 5 Paul_happy
+// 6 Paul_neutral
+// 7 Ringo_happy
+// 8 Ringo_neutral
+// 9 all
+
+
 void PlayMode::load_dialog_tree(std::string path) {
 	std::ifstream file(path);
 
@@ -26,7 +39,9 @@ void PlayMode::load_dialog_tree(std::string path) {
     {
 		Dialog dialog;
 
-		sscanf_s(line.c_str(), "%d", &dialog.mood);
+		int id;
+
+		sscanf_s(line.c_str(), "%d %d", &id, &dialog.mood);
 
 		std::getline(file, line);
 		dialog.line = line;
@@ -244,6 +259,9 @@ void PlayMode::transition(int new_state) {
 	hb_buffer_reset(buf); 
 	hb_buffer_add_utf8(buf, dialog_tree[dialog_state].line.c_str(), -1, 0, -1);
 	hb_shape(hb_font, buf, NULL, 0);
+
+	// The current mood is listed here select the appropriate image to match this mood
+	printf("Mood %d\n", dialog_tree[dialog_state].mood);
 
 	for(hb_buffer_t* resp_buf : response_bufs) hb_buffer_destroy(resp_buf);
 	response_bufs.clear();
