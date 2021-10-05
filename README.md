@@ -1,8 +1,8 @@
-# (TODO: your game's title)
+# Beebles Dating Simulator
 
-Author: (TODO: your name)
+Authors: Anne He and George Ralph
 
-Design: (TODO: In two sentences or fewer, describe what is new and interesting about your game.)
+Design: This game gives players a unique dialog tree for each character they converse with. Each of the four Beebles have their own character art with differing expressions, to help indicate their moods.
 
 Text Drawing: We render the text at runtime and store the texture for each glyph in a map.
 As recommended/required, we used freetype and OpenGL to render the text, and harfbuzz to shape the text.
@@ -14,7 +14,11 @@ Screen Shot:
 
 How To Play:
 
-(TODO: describe the controls and (if needed) goals/strategy.)
+Get the once in a lifetime chance to talk with all four members of one of the biggest acts in music: The Beebles! Each of the four members: John Lemon, Pete McCafferty, Geoff Harrington, and Richard Stripe have their own dialog trees to converse with.
+
+Use the up and down arrow keys to select a dialog response option. Press enter to say that option. 
+
+There is a bit of drama going on within the band, see if you can talk to each character to resolve the issue!
 
 Sources:
 
@@ -37,3 +41,4 @@ https://github.com/lassyla/game4
 
 This game was built with [NEST](NEST.md).
 
+All characters and musical groups in this game are purely fictional. Any resemblance to actual persons living or dead is purely coincidental.
