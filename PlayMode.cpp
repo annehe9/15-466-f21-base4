@@ -1,5 +1,11 @@
 #include "PlayMode.hpp"
 
+#ifdef _MSC_VER 
+#define SSCANF sscanf_s
+#else    
+#define SSCANF sscanf
+#endif
+
 //#include "LitColorTextureProgram.hpp"
 
 #include "ColorTextureProgram.hpp"
@@ -41,7 +47,7 @@ void PlayMode::load_dialog_tree(std::string path) {
 
 		int id;
 
-		sscanf_s(line.c_str(), "%d %d", &id, &dialog.mood);
+		SSCANF(line.c_str(), "%d %d", &id, &dialog.mood);
 
 		std::getline(file, line);
 		dialog.line = line;
@@ -54,7 +60,7 @@ void PlayMode::load_dialog_tree(std::string path) {
 			size_t split_pos = line.find_first_of(" ");
 
 			// Scan the number from the string before the space
-			sscanf_s(line.substr(0, split_pos).c_str(), "%d", &response.index);
+			SSCANF(line.substr(0, split_pos).c_str(), "%d", &response.index);
 
 			// Scan the response label from the rest of the string
 			response.line = line.substr(split_pos, line.size() - split_pos);
@@ -309,7 +315,7 @@ void PlayMode::update(float elapsed) {
 		hb_buffer_add_utf8(buf, dialog_tree[dialog_state].line.substr(0, substring).c_str(), -1, 0, -1);
 		hb_shape(hb_font, buf, NULL, 0);
 
-		drawing_done = substring >= current_dialog.line.size();
+		drawing_done = substring >= (int)current_dialog.line.size();
 	}
 }
 
