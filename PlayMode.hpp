@@ -26,7 +26,10 @@ struct PlayMode : Mode {
 	virtual bool handle_event(SDL_Event const &, glm::uvec2 const &window_size) override;
 	virtual void update(float elapsed) override;
 	virtual void draw(glm::uvec2 const &drawable_size) override;
+
 	void load_dialog_tree(std::string path);
+	void transition(int new_state);
+
 	virtual void render_text(hb_buffer_t* buffer, float width, float x, float y, float scale, int length, glm::vec3 color);
 
 	//----- game state -----

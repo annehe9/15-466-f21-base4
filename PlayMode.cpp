@@ -52,13 +52,14 @@ void PlayMode::load_dialog_tree(std::string path) {
 		dialog_tree.emplace_back(dialog);
     }
 
-	for(Dialog &dialog : dialog_tree) {
-		printf("\n%s (%d)\n", dialog.line.c_str(), dialog.mood);
-		for(Response &response : dialog.responses) {
-			printf("  ( %d ) %s\n", response.index, response.line.c_str());
-		}
-	}
-}
+	// Print out the entire dialog tree for testing purposes
+	//for(Dialog &dialog : dialog_tree) {
+	//	printf("\n%s (%d)\n", dialog.line.c_str(), dialog.mood);
+	//	for(Response &response : dialog.responses) {
+	//		printf("  ( %d ) %s\n", response.index, response.line.c_str());
+	//	}
+	//}
+}//
 
 PlayMode::PlayMode() {
 	//load dialog tree
@@ -101,7 +102,9 @@ PlayMode::PlayMode() {
 	//start music loop playing:
 	// (note: position will be over-ridden in update())
 	//leg_tip_loop = Sound::loop_3D(*dusty_floor_sample, 1.0f, get_leg_tip_position(), 10.0f);
-	
+
+	// Initialize to the start state
+	transition(0);
 }
 
 PlayMode::~PlayMode() {
@@ -230,6 +233,31 @@ void PlayMode::render_text(hb_buffer_t* buffer, float width, float x, float y, f
 
 }
 
+void PlayMode::transition(int new_state) {
+	dialog_state = new_state;
+
+	response_selection = 0;
+	
+	hb_buffer_reset(buf); 
+	hb_buffer_add_utf8(buf, dialog_tree[dialog_state].line.c_str(), -1, 0, -1);
+	hb_shape(hb_font, buf, NULL, 0);
+
+	for(hb_buffer_t* resp_buf : response_bufs) hb_buffer_destroy(resp_buf);
+	response_bufs.clear();
+
+	for(Response response : dialog_tree[dialog_state].responses) {
+		hb_buffer_t* resp_buf = hb_buffer_create();
+
+		hb_buffer_add_utf8(resp_buf, response.line.c_str(), -1, 0, -1);
+		hb_buffer_set_direction(resp_buf, HB_DIRECTION_LTR);
+		hb_buffer_set_script(resp_buf, HB_SCRIPT_LATIN);
+		hb_buffer_set_language(resp_buf, hb_language_from_string("en", -1));
+		hb_shape(hb_font, resp_buf, NULL, 0);
+
+		response_bufs.emplace_back(resp_buf);
+	}
+}
+
 void PlayMode::update(float elapsed) {
 	Dialog current_dialog = dialog_tree[dialog_state];
 	int response_cnt = (int)current_dialog.responses.size();
@@ -244,9 +272,12 @@ void PlayMode::update(float elapsed) {
 	}
 	else if (enter.pressed) {
 		// Transition to the next dialog state
-		dialog_state = current_dialog.responses[response_selection].index;
-		response_selection = 0;
+		transition(current_dialog.responses[response_selection].index);
 	}
+
+	up.pressed = false;
+	down.pressed = false;
+	enter.pressed = false;
 
 	/*
 	if (!finished_typing) {
@@ -261,50 +292,12 @@ void PlayMode::update(float elapsed) {
 }
 
 void PlayMode::draw(glm::uvec2 const &drawable_size) {
+	Dialog current_dialog = dialog_tree[dialog_state];
+	int response_cnt = (int)current_dialog.responses.size();
 
 	//clear the color buffer:
 	glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
-	/*
-	glClearDepth(1.0f); //1.0 is actually the default value to clear the depth buffer to, but FYI you can change it.
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-	glEnable(GL_DEPTH_TEST);
-	glDepthFunc(GL_LESS); //this is the default depth comparison function, but FYI you can change it.
-
-	{ //use DrawLines to overlay some text:
-		glDisable(GL_DEPTH_TEST);
-		float aspect = float(drawable_size.x) / float(drawable_size.y);
-		DrawLines lines(glm::mat4(
-			1.0f / aspect, 0.0f, 0.0f, 0.0f,
-			0.0f, 1.0f, 0.0f, 0.0f,
-			0.0f, 0.0f, 1.0f, 0.0f,
-			0.0f, 0.0f, 0.0f, 1.0f
-		));
-
-		constexpr float H = 0.09f;
-		float y = -0.3f;
-		lines.draw_text(dialog_tree[dialog_state].line,
-			glm::vec3(-aspect + 0.1f * H + 0.3f, y + 0.1f * H, 0.0),
-			glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
-			glm::u8vec4(0xff, 0xff, 0xff, 0x00));
-
-		for(int i = 0; i < dialog_tree[dialog_state].responses.size(); i++) {
-			y -= H * 1.2f;
-
-			lines.draw_text(dialog_tree[dialog_state].responses[i].line,
-				glm::vec3(-aspect + 0.1f * H + 0.5f, y + 0.1f * H, 0.0),
-				glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
-				(i == response_selection)
-				? glm::u8vec4(0xff, 0xff, 0xff, 0x00)
-				: glm::u8vec4(0xc0, 0xc0, 0xc0, 0x00));
-		}
-
-		//float ofs = 2.0f / drawable_size.y;
-		//lines.draw_text("Mouse motion rotates camera; WASD moves; escape ungrabs mouse",
-		//	glm::vec3(-aspect + 0.1f * H + ofs, -1.0 + + 0.1f * H + ofs, 0.0),
-		//	glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
-		//	glm::u8vec4(0xff, 0xff, 0xff, 0x00));
-	*/
+	
 	glClear(GL_COLOR_BUFFER_BIT);
 
 	//use alpha blending:
@@ -317,7 +310,20 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 
 	//instead of 14 pass in curr_text_len
 	//text buffer, width of box, x, y, scale, text length, color
-	render_text(buf, 950.0f, 100.0f, 250.0f, 1.0f, 14, glm::vec3(1.0f,1.0f,1.0f));
+	//buf = hb_buffer_create();
+	//hb_buffer_add_utf8(buf, dialog_tree[dialog_state].line, -1, 0, -1);
+
+
+	float y = 200.0f;
+	render_text(buf, 950.0f, 100.f, y, 1.0f, 14, glm::vec3(1.0f,1.0f,1.0f));
+	y -= 32.f;
+
+	for(int i = 0; i < response_cnt; i++) {
+		y -= 32.f;
+		glm::vec3 color(i == response_selection ? 1.0f : 0.75f);
+
+		render_text(response_bufs[i], 950.0f, 150.f, y, 1.0f, 14, color);
+	}
 
 	GL_ERRORS();
 }
