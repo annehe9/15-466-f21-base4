@@ -31,6 +31,8 @@ Sources:
 
 Art by Anne. Writing by George.
 
+Font "Hockey is Lif" by Tom Murphy, from http://fonts.tom7.com/.
+
 Used 15-466 Game0 and Game4 base code.
 
 For text rendering, referenced:
@@ -46,6 +48,10 @@ https://harfbuzz.github.io/index.html
 https://github.com/ChunanGang/TextBasedGame
 
 https://github.com/lassyla/game4
+
+Drawing PNGs referenced:
+
+https://github.com/kjannakh/15-466-f20-base4
 
 Cross platform SSCANF define referenced:
 
