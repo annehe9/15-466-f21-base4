@@ -1,6 +1,6 @@
 0
 Who do you want to date?
-0 John Lemon
+42 John Lemon
 1 Pete McCafferty
 28 Geoff Harrington
 14 Richard Stripe
@@ -197,3 +197,75 @@ Well, nice talking with you.
 No way. I don't believe you.
 31 He loves you, yeah, yeah, yeah.
 30 Yeah, you got me. Just kidding.
+
+42
+Well hello, hello.
+45 Hi John
+43 Goodbye
+
+43
+Leaving already? What did I do?
+44 Nothing, I was just kidding.
+0 You're just not my type.
+
+44
+Haha, well you got me.
+45 Yep!
+
+45
+So how are you feeling?
+46 I need somebody. Wanna Help?
+47 It's been a hard day's night, I'm feeling kinda tired
+48 Magical Mystery Tour
+
+46
+Haha, not just anybody, right?
+49 You got it. >w<
+50 Well, I was actually kinda hoping for Richard.
+
+47
+Fair enough, the life of a Beebles fan must be exhausting
+51 You have no idea.
+
+48
+I, uhh... Ok.
+0 Anthology 2 [Disc 2]
+
+49
+Well, I'll have to see what I can do. You're pretty cute, you know?
+52 I don't really think so.
+53 You really think so?
+
+50
+Yeah, I get that, he is quite the ladies man. You should go talk to him.
+0 Ok!
+
+51
+I feel you. Some people call me lazy when I'm Only Sleeping. You better get some rest.
+0 [ pass out from exhaustion ]
+
+52
+Well, you are. I gotta run though. Nice talking.
+0 Bye
+
+53
+Haha, of course. Almost as cute as Pete.
+54 Wait, Pete?
+57 McLemon shipping? Gross
+
+54
+Yeah, I mean, he is the cute one after all, I'm afraid even you can't compete with that.
+55 I thought we had something special?
+56 Yeah, he is pretty cute actually. I think I'll go talk to him.
+
+55
+Haha, not that special, I'm afraid.
+0 Ouch
+
+56
+Good idea. Tell him I said hi.
+0 Bye
+
+57
+Hey! Don't knock it till you try it!
+0 Bye
