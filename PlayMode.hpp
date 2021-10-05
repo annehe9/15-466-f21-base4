@@ -29,8 +29,8 @@ struct PlayMode : Mode {
 
 	void load_dialog_tree(std::string path);
 	void transition(int new_state);
-
-	virtual void render_text(hb_buffer_t* buffer, float width, float x, float y, float scale, int length, glm::vec3 color);
+	void render_text(hb_buffer_t* buffer, float width, float x, float y, float scale, glm::vec3 color);
+	void draw_image(GLuint &tex, float left, float right, float top, float bottom);
 
 	//----- game state -----
 
@@ -64,12 +64,15 @@ struct PlayMode : Mode {
 	//std::shared_ptr< Sound::PlayingSample > leg_tip_loop;
 
 	//images?
-	GLuint background_tex;
-	GLuint john_tex;
-	GLuint paul_tex;
-	GLuint george_tex;
-	GLuint ringo_tex;
 	GLuint white_tex;
+	GLuint bg_tex;
+	std::string bg_path = "./images/bg.png";
+	GLuint images[9];
+	std::string image_paths[9] = { "./images/George_happy.png", "./images/George_neutral.png",
+									"./images/John_anger.png", "./images/John_neutral.png",
+									"./images/Paul_closedeyes.png", "./images/Paul_happy.png", "./images/Paul_neutral.png",
+									"./images/Ringo_happy.png", "./images/Ringo_neutral.png" };
+	glm::u8vec4 white = glm::u8vec4(255, 255, 255, 255);
 
 	//font stuff
 	FT_Library ftlibrary;
@@ -78,6 +81,7 @@ struct PlayMode : Mode {
 	std::vector<hb_buffer_t*> response_bufs;
 	hb_font_t* hb_font;
 	std::string font_path = "hockey.ttf";
+	float font_size = 32.0f;
 
 	//https://learnopengl.com/In-Practice/Text-Rendering
 	struct Character {
@@ -91,9 +95,23 @@ struct PlayMode : Mode {
 	std::vector<std::string> choice_text;
 	std::map<FT_ULong, Character> Characters;
 
+	//draw functions will work on vectors of vertices, defined as follows:
+	struct Vertex {
+		Vertex(glm::vec3 const& Position_, glm::u8vec4 const& Color_, glm::vec2 const& TexCoord_) :
+			Position(Position_), Color(Color_), TexCoord(TexCoord_) { }
+		glm::vec3 Position;
+		glm::u8vec4 Color;
+		glm::vec2 TexCoord;
+	};
+	static_assert(sizeof(Vertex) == 4 * 3 + 1 * 4 + 4 * 2, "PlayMode::Vertex should be packed");
+
+	glm::mat4 projection = glm::ortho(0.0f, 1280.0f, 0.0f, 720.0f);
+
 	//Buffer used to hold vertex data during drawing:
 	GLuint vertex_buffer = 0;
+	GLuint VAO = 0; //text
 
 	//Vertex Array Object that maps buffer locations to color_texture_program attribute locations:
 	GLuint vertex_buffer_for_color_texture_program = 0;
+	GLuint VBO = 0; //text
 };
