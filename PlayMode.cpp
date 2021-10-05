@@ -1,42 +1,20 @@
 #include "PlayMode.hpp"
 
-#include "LitColorTextureProgram.hpp"
+//#include "LitColorTextureProgram.hpp"
 
-#include "DrawLines.hpp"
+#include "ColorTextureProgram.hpp"
+#include "TextTextureProgram.hpp"
 #include "Mesh.hpp"
 #include "Load.hpp"
 #include "gl_errors.hpp"
 #include "data_path.hpp"
+#include "read_write_chunk.hpp"
 
 #include <glm/gtc/type_ptr.hpp>
 
 #include <random>
 #include <fstream>
 #include <string>
-
-GLuint hexapod_meshes_for_lit_color_texture_program = 0;
-Load< MeshBuffer > hexapod_meshes(LoadTagDefault, []() -> MeshBuffer const * {
-	MeshBuffer const *ret = new MeshBuffer(data_path("hexapod.pnct"));
-	hexapod_meshes_for_lit_color_texture_program = ret->make_vao_for_program(lit_color_texture_program->program);
-	return ret;
-});
-
-Load< Scene > hexapod_scene(LoadTagDefault, []() -> Scene const * {
-	return new Scene(data_path("hexapod.scene"), [&](Scene &scene, Scene::Transform *transform, std::string const &mesh_name){
-		Mesh const &mesh = hexapod_meshes->lookup(mesh_name);
-
-		scene.drawables.emplace_back(transform);
-		Scene::Drawable &drawable = scene.drawables.back();
-
-		drawable.pipeline = lit_color_texture_program_pipeline;
-
-		drawable.pipeline.vao = hexapod_meshes_for_lit_color_texture_program;
-		drawable.pipeline.type = mesh.type;
-		drawable.pipeline.start = mesh.start;
-		drawable.pipeline.count = mesh.count;
-
-	});
-});
 
 void PlayMode::load_dialog_tree(std::string path) {
 	std::ifstream file(path);
@@ -82,27 +60,59 @@ void PlayMode::load_dialog_tree(std::string path) {
 	}
 }
 
-PlayMode::PlayMode() : scene(*hexapod_scene) {
+PlayMode::PlayMode() {
+	//load dialog tree
 	load_dialog_tree(data_path("dialog-tree.txt"));
 
 	dialog_state = 0;
 	response_selection = 0;
 
-	//get pointer to camera for convenience:
-	if (scene.cameras.size() != 1) throw std::runtime_error("Expecting scene to have exactly one camera, but it has " + std::to_string(scene.cameras.size()));
-	camera = &scene.cameras.front();
+	//init text rendering
+	// referenced https://learnopengl.com/In-Practice/Text-Rendering and https://www.freetype.org/freetype2/docs/tutorial/step1.html
+	if (FT_Init_FreeType(&ftlibrary)) throw std::runtime_error("ERROR::FREETYPE: Could not init FreeType Library");
+	if (FT_New_Face(ftlibrary, const_cast<char*>(data_path(font_path).c_str()), 0, &ftface)) throw std::runtime_error("ERROR::FREETYPE: Failed to load font");
+
+	//FT_Set_Pixel_Sizes(ftface, 0, 18); //another way to set size
+	FT_Set_Char_Size(ftface, 0, 32*64, 0, 0); //64 units per pixel
+	if (FT_Load_Char(ftface, 'X', FT_LOAD_RENDER)) throw std::runtime_error("ERROR::FREETYTPE: Failed to load Glyph");
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1); // disable byte-alignment restriction
+
+	buf = hb_buffer_create();
+	hb_buffer_add_utf8(buf, "Hello World!!!", -1, 0, -1);
+	hb_buffer_set_direction(buf, HB_DIRECTION_LTR);
+	hb_buffer_set_script(buf, HB_SCRIPT_LATIN);
+	hb_buffer_set_language(buf, hb_language_from_string("en", -1));
+	hb_font = hb_ft_font_create(ftface, NULL);
+	hb_shape(hb_font, buf, NULL, 0);
+
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	glGenVertexArrays(1, &vertex_buffer_for_color_texture_program);
+	glGenBuffers(1, &vertex_buffer);
+	glBindVertexArray(vertex_buffer_for_color_texture_program);
+	glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 6 * 4, NULL, GL_DYNAMIC_DRAW);
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), 0);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindVertexArray(0);
+
+	//start music loop playing:
+	// (note: position will be over-ridden in update())
+	//leg_tip_loop = Sound::loop_3D(*dusty_floor_sample, 1.0f, get_leg_tip_position(), 10.0f);
+	
 }
 
 PlayMode::~PlayMode() {
+	hb_buffer_destroy(buf);
+	FT_Done_Face(ftface);
+	FT_Done_FreeType(ftlibrary);
 }
 
 bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size) {
-
 	if (evt.type == SDL_KEYDOWN) {
-		if (evt.key.keysym.sym == SDLK_ESCAPE) {
-			SDL_SetRelativeMouseMode(SDL_FALSE);
-			return true;
-		} else if (evt.key.keysym.sym == SDLK_UP) {
+		if (evt.key.keysym.sym == SDLK_UP) {
 			up.downs += 1;
 			up.pressed = true;
 			return true;
@@ -127,8 +137,97 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 			return true;
 		}
 	}
-
 	return false;
+}
+
+//RenderText base function from https://learnopengl.com/In-Practice/Text-Rendering
+//integrated harfbuzz using this tutorial: https://harfbuzz.github.io/ch03s03.html
+void PlayMode::render_text(hb_buffer_t* buffer, float width, float x, float y, float scale, int length, glm::vec3 color)
+{
+	//glDisable(GL_DEPTH_TEST);
+	glUseProgram(text_texture_program->program);
+	glUniform3f(glGetUniformLocation(text_texture_program->program, "textColor"), color.x, color.y, color.z);
+	glm::mat4 projection = glm::ortho(0.0f, 1280.0f, 0.0f, 720.0f);
+	glUniformMatrix4fv(glGetUniformLocation(text_texture_program->program, "projection"), 1, GL_FALSE, &projection[0][0]);
+	glActiveTexture(GL_TEXTURE0);
+
+	glBindVertexArray(vertex_buffer_for_color_texture_program);
+
+	unsigned int glyph_count;
+	hb_glyph_info_t* glyph_info = hb_buffer_get_glyph_infos(buffer, &glyph_count);
+	//if (length != -1 && glyph_count > (unsigned int)(length)) glyph_count = length;
+
+	for (unsigned int i = 0; i < glyph_count; ++i) {
+
+		//check if the glyph has been loaded yet. if not, load it with this code from https://learnopengl.com/In-Practice/Text-Rendering
+		if (Characters.find(glyph_info[i].codepoint) == Characters.end()) {
+			if (FT_Load_Glyph(ftface, glyph_info[i].codepoint, FT_LOAD_RENDER)) std::runtime_error("ERROR::FREETYTPE: Failed to load Glyph");
+			// generate texture
+			//https://www.khronos.org/opengl/wiki/Texture
+			unsigned int texture;
+			glGenTextures(1, &texture);
+			glBindTexture(GL_TEXTURE_2D, texture);
+			glTexImage2D(
+				GL_TEXTURE_2D,
+				0,
+				GL_RED,
+				ftface->glyph->bitmap.width,
+				ftface->glyph->bitmap.rows,
+				0,
+				GL_RED,
+				GL_UNSIGNED_BYTE,
+				ftface->glyph->bitmap.buffer
+			);
+			// set texture options
+			//https://www.khronos.org/registry/OpenGL-Refpages/gl4/html/glTexParameter.xhtml
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); //not using mipmap
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR); //not using mipmap
+			// now store character for later use
+			Character ch = {
+				texture,
+				glm::ivec2(ftface->glyph->bitmap.width, ftface->glyph->bitmap.rows),
+				glm::ivec2(ftface->glyph->bitmap_left, ftface->glyph->bitmap_top),
+				(unsigned int)(ftface->glyph->advance.x)
+			};
+			Characters.insert(std::pair<FT_ULong, Character>(glyph_info[i].codepoint, ch));
+		}
+
+		Character ch = Characters[glyph_info[i].codepoint];
+		float xpos = x + ch.Bearing.x * scale;
+		float ypos = y - (ch.Size.y - ch.Bearing.y) * scale;
+		float w = ch.Size.x * scale;
+		float h = ch.Size.y * scale;
+
+		// update vertex_buffer for each character
+		float vertices[6][4] = {
+			{ xpos,     ypos + h,   0.0f, 0.0f },
+			{ xpos,     ypos,       0.0f, 1.0f },
+			{ xpos + w, ypos,       1.0f, 1.0f },
+
+			{ xpos,     ypos + h,   0.0f, 0.0f },
+			{ xpos + w, ypos,       1.0f, 1.0f },
+			{ xpos + w, ypos + h,   1.0f, 0.0f }
+		};
+
+		// render glyph texture over quad
+		glBindTexture(GL_TEXTURE_2D, ch.TextureID);
+		// update content of vertex_buffer memory
+		glBindBuffer(GL_ARRAY_BUFFER, vertex_buffer);
+		glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		// render quad
+		glDrawArrays(GL_TRIANGLES, 0, 6);
+		// now advance cursors for next glyph (note that advance is number of 1/64 pixels)
+		x += (ch.Advance >> 6) * scale; // bitshift by 6 to get value in pixels (2^6 = 64)
+
+	}
+
+	glBindVertexArray(0);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glUseProgram(0);
+
 }
 
 void PlayMode::update(float elapsed) {
@@ -143,35 +242,29 @@ void PlayMode::update(float elapsed) {
 		response_selection++;
 		if(response_selection >= response_cnt) response_selection = response_cnt - 1;
 	}
-	else if(enter.pressed) {
+	else if (enter.pressed) {
 		// Transition to the next dialog state
 		dialog_state = current_dialog.responses[response_selection].index;
 		response_selection = 0;
 	}
 
-	//reset button press counters:
-	up.downs = 0;
-	down.downs = 0;
-	enter.downs = 0;
-
-	up.pressed = false;
-	down.pressed = false;
-	enter.pressed = false;
+	/*
+	if (!finished_typing) {
+		text_timer += elapsed;
+		curr_text_len = (unsigned int)std::floor(text_timer / typing_speed);
+		if (text_len >= total_text_len) {
+			finished_typing = true;
+			curr_text_len = total_text_len;
+		}
+	}
+	*/
 }
 
 void PlayMode::draw(glm::uvec2 const &drawable_size) {
-	//update camera aspect ratio for drawable:
-	camera->aspect = float(drawable_size.x) / float(drawable_size.y);
 
-	//set up light type and position for lit_color_texture_program:
-	// TODO: consider using the Light(s) in the scene to do this
-	glUseProgram(lit_color_texture_program->program);
-	glUniform1i(lit_color_texture_program->LIGHT_TYPE_int, 1);
-	glUniform3fv(lit_color_texture_program->LIGHT_DIRECTION_vec3, 1, glm::value_ptr(glm::vec3(0.0f, 0.0f,-1.0f)));
-	glUniform3fv(lit_color_texture_program->LIGHT_ENERGY_vec3, 1, glm::value_ptr(glm::vec3(1.0f, 1.0f, 0.95f)));
-	glUseProgram(0);
-
+	//clear the color buffer:
 	glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
+	/*
 	glClearDepth(1.0f); //1.0 is actually the default value to clear the depth buffer to, but FYI you can change it.
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -211,6 +304,20 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 		//	glm::vec3(-aspect + 0.1f * H + ofs, -1.0 + + 0.1f * H + ofs, 0.0),
 		//	glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
 		//	glm::u8vec4(0xff, 0xff, 0xff, 0x00));
-	}
+	*/
+	glClear(GL_COLOR_BUFFER_BIT);
+
+	//use alpha blending:
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	//don't use the depth test:
+	glDisable(GL_DEPTH_TEST);
+
+	//scene.draw(*camera);
+
+	//instead of 14 pass in curr_text_len
+	//text buffer, width of box, x, y, scale, text length, color
+	render_text(buf, 950.0f, 100.0f, 250.0f, 1.0f, 14, glm::vec3(1.0f,1.0f,1.0f));
+
 	GL_ERRORS();
 }
