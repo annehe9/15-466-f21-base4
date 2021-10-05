@@ -1,15 +1,133 @@
 0
-This is the first line.
-1 First Response
-1 Response 2
-2 IDK
-0 Foo
+Who do you want to date?
+0 John Lemon
+1 Pete McCafferty
+0 Geoff Harrington
+14 Richard Stripe
 
 1
-This is the second line.
-0 First Response
-2 IDK
+H-Hey.
+2 Hi
 
 2
-Foofy
-0 Cum
+Sorry if this is weird, but, do you think I'm cute?
+4 Yes
+3 No
+
+3
+Oh, sorry for wasting your time.
+0 [ Try another beeble ]
+
+4
+You say "yes," but I say "no" :(
+3 I guess you're right.
+5 Noooo stop. You can't say that about yourself.
+
+5
+You say "stop," but I say "go, go, go"
+6 You know, I gotta "go, go, go" myself, see you later.
+8 You are so totally cute. Geoff has nothing on you.
+
+6
+We just started talking, I don't know why you say "goodbye," I say "hello" ;)
+0 Goodbye
+7 Fair enough
+
+7
+Right, where was I...?
+5 I said to stop being hard on yourself
+
+8
+Geoff? You've gotta be joking. He's the real heartthrob of the Beebles.
+9 Nah, cat ears really aren't my thing.
+3 Yeah, I guess you're right, I guess I should be talking with him.
+10 Idk, sounds like you like him...
+
+9
+Haha yeah. And can you imagine all the hairballs he gets?
+11 Haha, Pete, you're so funny.
+12 What? I don't get what you mean.
+
+10
+WHAT? No! I would never! Ok, maybe he is a little cute.
+11 Not as cute as you :P
+13 Agreed.
+
+11
+You really think so? Thanks, I think you're pretty groovy too. Gotta go though. Let's talk again sometime.
+0 Bye
+
+12 
+Hairballs, you know, because he's a cat? I guess it's not that funny.
+0 I'm allergic to cats.
+
+13
+Well, at least that's something we have in common. Gotta go, for now though.
+0 Bye Pete!
+
+14
+Quick, tell me your favorite fruit!
+15 Apple
+16 Tangerine
+17 Strawberry
+
+15
+Not a bad choice. Sounds like a great name for a record label.
+18 For sure.
+
+16
+Oh, I love Cream Tangerine candies! My favorite is the Savoy Truffle.
+18 Me too!
+19 Gross, I hate fruit candies.
+
+17
+I oughta take you down to the strawberry fields then! Plenty there to pick!
+18 Sounds like a date!
+19 My parents were killed by a strawberry.
+
+18
+Haha, great. So what's on your mind?
+20 I was actually just about to send you some fanmail.
+22 I was wondering if you we're dating anyone...
+
+19
+Eh, maybe we're not really a match then...
+0 Maybe not.
+
+20
+I'm warning you with peace and love, but any fanmail you send me after the 20th of October is gonna be tossed.
+21 Seriously?
+19 You can't stop me, I'm sending it no matter what.
+
+21
+Yep. With peace and love, I've got too much to do.
+23 Alright.
+
+22
+Well, I get by with a little help from my friends...
+27 Haha, Richard, could I be your friend then?
+
+23
+You know where I'd like to be?
+24 Where?
+24 No idea.
+19 At the post office?
+
+24
+I'd like to be under the sea, in an octopuses garden, in the shade.
+19 Eh, idk, do octopuses have gardens?
+25 You could take a yellow submarine!
+
+25
+Haha you've got it.
+26 Do I have you impressed?
+
+26
+It don't come easy, but you're far out. Let's talk again sometime. Peace and love.
+0 Ok! Bye.
+
+27
+We'll have to find out.
+23 How so?
+
+

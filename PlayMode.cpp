@@ -138,18 +138,15 @@ void PlayMode::update(float elapsed) {
 	if(up.pressed) {
 		response_selection--;
 		if(response_selection < 0) response_selection = 0;
-		printf("Response %d\n", response_selection);
 	}
 	else if(down.pressed) {
 		response_selection++;
 		if(response_selection >= response_cnt) response_selection = response_cnt - 1;
-		printf("Response %d\n", response_selection);
 	}
 	else if(enter.pressed) {
 		// Transition to the next dialog state
 		dialog_state = current_dialog.responses[response_selection].index;
 		response_selection = 0;
-		printf("Transitioned to %d\n", dialog_state);
 	}
 
 	//reset button press counters:
