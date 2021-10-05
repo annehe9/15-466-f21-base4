@@ -11,6 +11,8 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include <random>
+#include <fstream>
+#include <string>
 
 GLuint hexapod_meshes_for_lit_color_texture_program = 0;
 Load< MeshBuffer > hexapod_meshes(LoadTagDefault, []() -> MeshBuffer const * {
@@ -36,32 +38,59 @@ Load< Scene > hexapod_scene(LoadTagDefault, []() -> Scene const * {
 	});
 });
 
-Load< Sound::Sample > dusty_floor_sample(LoadTagDefault, []() -> Sound::Sample const * {
-	return new Sound::Sample(data_path("dusty-floor.opus"));
-});
+void PlayMode::load_dialog_tree(std::string path) {
+	std::ifstream file(path);
+
+	dialog_tree.clear();
+
+    std::string line;
+    while (std::getline(file, line))
+    {
+		Dialog dialog;
+
+		sscanf_s(line.c_str(), "%d", &dialog.mood);
+
+		std::getline(file, line);
+		dialog.line = line;
+
+		std::getline(file, line);
+		while((int)line.length() > 0) {
+			Response response;
+			
+			// Find the first space
+			size_t split_pos = line.find_first_of(" ");
+
+			// Scan the number from the string before the space
+			sscanf_s(line.substr(0, split_pos).c_str(), "%d", &response.index);
+
+			// Scan the response label from the rest of the string
+			response.line = line.substr(split_pos, line.size() - split_pos);
+
+			dialog.responses.emplace_back(response);
+
+			if(!std::getline(file, line)) break;
+		}
+
+		dialog_tree.emplace_back(dialog);
+    }
+
+	for(Dialog &dialog : dialog_tree) {
+		printf("\n%s (%d)\n", dialog.line.c_str(), dialog.mood);
+		for(Response &response : dialog.responses) {
+			printf("  ( %d ) %s\n", response.index, response.line.c_str());
+		}
+	}
+}
 
 PlayMode::PlayMode() : scene(*hexapod_scene) {
-	//get pointers to leg for convenience:
-	for (auto &transform : scene.transforms) {
-		if (transform.name == "Hip.FL") hip = &transform;
-		else if (transform.name == "UpperLeg.FL") upper_leg = &transform;
-		else if (transform.name == "LowerLeg.FL") lower_leg = &transform;
-	}
-	if (hip == nullptr) throw std::runtime_error("Hip not found.");
-	if (upper_leg == nullptr) throw std::runtime_error("Upper leg not found.");
-	if (lower_leg == nullptr) throw std::runtime_error("Lower leg not found.");
+	load_dialog_tree(data_path("dialog-tree.txt"));
 
-	hip_base_rotation = hip->rotation;
-	upper_leg_base_rotation = upper_leg->rotation;
-	lower_leg_base_rotation = lower_leg->rotation;
+	dialog_state = 0;
+	response_selection = 0;
 
 	//get pointer to camera for convenience:
 	if (scene.cameras.size() != 1) throw std::runtime_error("Expecting scene to have exactly one camera, but it has " + std::to_string(scene.cameras.size()));
 	camera = &scene.cameras.front();
-
-	//start music loop playing:
-	// (note: position will be over-ridden in update())
-	leg_tip_loop = Sound::loop_3D(*dusty_floor_sample, 1.0f, get_leg_tip_position(), 10.0f);
 }
 
 PlayMode::~PlayMode() {
@@ -73,53 +102,28 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 		if (evt.key.keysym.sym == SDLK_ESCAPE) {
 			SDL_SetRelativeMouseMode(SDL_FALSE);
 			return true;
-		} else if (evt.key.keysym.sym == SDLK_a) {
-			left.downs += 1;
-			left.pressed = true;
-			return true;
-		} else if (evt.key.keysym.sym == SDLK_d) {
-			right.downs += 1;
-			right.pressed = true;
-			return true;
-		} else if (evt.key.keysym.sym == SDLK_w) {
+		} else if (evt.key.keysym.sym == SDLK_UP) {
 			up.downs += 1;
 			up.pressed = true;
 			return true;
-		} else if (evt.key.keysym.sym == SDLK_s) {
+		} else if (evt.key.keysym.sym == SDLK_DOWN) {
 			down.downs += 1;
 			down.pressed = true;
 			return true;
+		}else if (evt.key.keysym.sym == SDLK_RETURN) {
+			enter.downs += 1;
+			enter.pressed = true;
+			return true;
 		}
 	} else if (evt.type == SDL_KEYUP) {
-		if (evt.key.keysym.sym == SDLK_a) {
-			left.pressed = false;
-			return true;
-		} else if (evt.key.keysym.sym == SDLK_d) {
-			right.pressed = false;
-			return true;
-		} else if (evt.key.keysym.sym == SDLK_w) {
+		if (evt.key.keysym.sym == SDLK_UP) {
 			up.pressed = false;
 			return true;
-		} else if (evt.key.keysym.sym == SDLK_s) {
+		} else if (evt.key.keysym.sym == SDLK_DOWN) {
 			down.pressed = false;
 			return true;
-		}
-	} else if (evt.type == SDL_MOUSEBUTTONDOWN) {
-		if (SDL_GetRelativeMouseMode() == SDL_FALSE) {
-			SDL_SetRelativeMouseMode(SDL_TRUE);
-			return true;
-		}
-	} else if (evt.type == SDL_MOUSEMOTION) {
-		if (SDL_GetRelativeMouseMode() == SDL_TRUE) {
-			glm::vec2 motion = glm::vec2(
-				evt.motion.xrel / float(window_size.y),
-				-evt.motion.yrel / float(window_size.y)
-			);
-			camera->transform->rotation = glm::normalize(
-				camera->transform->rotation
-				* glm::angleAxis(-motion.x * camera->fovy, glm::vec3(0.0f, 1.0f, 0.0f))
-				* glm::angleAxis(motion.y * camera->fovy, glm::vec3(1.0f, 0.0f, 0.0f))
-			);
+		} else if (evt.key.keysym.sym == SDLK_RETURN) {
+			enter.pressed = false;
 			return true;
 		}
 	}
@@ -128,61 +132,31 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 }
 
 void PlayMode::update(float elapsed) {
+	Dialog current_dialog = dialog_tree[dialog_state];
+	int response_cnt = (int)current_dialog.responses.size();
 
-	//slowly rotates through [0,1):
-	wobble += elapsed / 10.0f;
-	wobble -= std::floor(wobble);
-
-	hip->rotation = hip_base_rotation * glm::angleAxis(
-		glm::radians(5.0f * std::sin(wobble * 2.0f * float(M_PI))),
-		glm::vec3(0.0f, 1.0f, 0.0f)
-	);
-	upper_leg->rotation = upper_leg_base_rotation * glm::angleAxis(
-		glm::radians(7.0f * std::sin(wobble * 2.0f * 2.0f * float(M_PI))),
-		glm::vec3(0.0f, 0.0f, 1.0f)
-	);
-	lower_leg->rotation = lower_leg_base_rotation * glm::angleAxis(
-		glm::radians(10.0f * std::sin(wobble * 3.0f * 2.0f * float(M_PI))),
-		glm::vec3(0.0f, 0.0f, 1.0f)
-	);
-
-	//move sound to follow leg tip position:
-	leg_tip_loop->set_position(get_leg_tip_position(), 1.0f / 60.0f);
-
-	//move camera:
-	{
-
-		//combine inputs into a move:
-		constexpr float PlayerSpeed = 30.0f;
-		glm::vec2 move = glm::vec2(0.0f);
-		if (left.pressed && !right.pressed) move.x =-1.0f;
-		if (!left.pressed && right.pressed) move.x = 1.0f;
-		if (down.pressed && !up.pressed) move.y =-1.0f;
-		if (!down.pressed && up.pressed) move.y = 1.0f;
-
-		//make it so that moving diagonally doesn't go faster:
-		if (move != glm::vec2(0.0f)) move = glm::normalize(move) * PlayerSpeed * elapsed;
-
-		glm::mat4x3 frame = camera->transform->make_local_to_parent();
-		glm::vec3 right = frame[0];
-		//glm::vec3 up = frame[1];
-		glm::vec3 forward = -frame[2];
-
-		camera->transform->position += move.x * right + move.y * forward;
+	if(up.pressed) {
+		response_selection--;
+		if(response_selection < 0) response_selection = 0;
 	}
-
-	{ //update listener to camera position:
-		glm::mat4x3 frame = camera->transform->make_local_to_parent();
-		glm::vec3 right = frame[0];
-		glm::vec3 at = frame[3];
-		Sound::listener.set_position_right(at, right, 1.0f / 60.0f);
+	else if(down.pressed) {
+		response_selection++;
+		if(response_selection >= response_cnt) response_selection = response_cnt - 1;
+	}
+	else if(enter.pressed) {
+		// Transition to the next dialog state
+		dialog_state = current_dialog.responses[response_selection].index;
+		response_selection = 0;
 	}
 
 	//reset button press counters:
-	left.downs = 0;
-	right.downs = 0;
 	up.downs = 0;
 	down.downs = 0;
+	enter.downs = 0;
+
+	up.pressed = false;
+	down.pressed = false;
+	enter.pressed = false;
 }
 
 void PlayMode::draw(glm::uvec2 const &drawable_size) {
@@ -204,8 +178,6 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LESS); //this is the default depth comparison function, but FYI you can change it.
 
-	scene.draw(*camera);
-
 	{ //use DrawLines to overlay some text:
 		glDisable(GL_DEPTH_TEST);
 		float aspect = float(drawable_size.x) / float(drawable_size.y);
@@ -217,20 +189,28 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 		));
 
 		constexpr float H = 0.09f;
-		lines.draw_text("Mouse motion rotates camera; WASD moves; escape ungrabs mouse",
-			glm::vec3(-aspect + 0.1f * H, -1.0 + 0.1f * H, 0.0),
-			glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
-			glm::u8vec4(0x00, 0x00, 0x00, 0x00));
-		float ofs = 2.0f / drawable_size.y;
-		lines.draw_text("Mouse motion rotates camera; WASD moves; escape ungrabs mouse",
-			glm::vec3(-aspect + 0.1f * H + ofs, -1.0 + + 0.1f * H + ofs, 0.0),
+		float y = -0.3f;
+		lines.draw_text(dialog_tree[dialog_state].line,
+			glm::vec3(-aspect + 0.1f * H + 0.3f, y + 0.1f * H, 0.0),
 			glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
 			glm::u8vec4(0xff, 0xff, 0xff, 0x00));
+
+		for(int i = 0; i < dialog_tree[dialog_state].responses.size(); i++) {
+			y -= H * 1.2f;
+
+			lines.draw_text(dialog_tree[dialog_state].responses[i].line,
+				glm::vec3(-aspect + 0.1f * H + 0.5f, y + 0.1f * H, 0.0),
+				glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
+				(i == response_selection)
+				? glm::u8vec4(0xff, 0xff, 0xff, 0x00)
+				: glm::u8vec4(0xc0, 0xc0, 0xc0, 0x00));
+		}
+
+		//float ofs = 2.0f / drawable_size.y;
+		//lines.draw_text("Mouse motion rotates camera; WASD moves; escape ungrabs mouse",
+		//	glm::vec3(-aspect + 0.1f * H + ofs, -1.0 + + 0.1f * H + ofs, 0.0),
+		//	glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
+		//	glm::u8vec4(0xff, 0xff, 0xff, 0x00));
 	}
 	GL_ERRORS();
-}
-
-glm::vec3 PlayMode::get_leg_tip_position() {
-	//the vertex position here was read from the model in blender:
-	return lower_leg->make_local_to_world() * glm::vec4(-1.26137f, -11.861f, 0.0f, 1.0f);
 }
