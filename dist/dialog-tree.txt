@@ -2,7 +2,7 @@
 Who do you want to date?
 0 John Lemon
 1 Pete McCafferty
-0 Geoff Harrington
+28 Geoff Harrington
 14 Richard Stripe
 
 1
@@ -130,4 +130,70 @@ It don't come easy, but you're far out. Let's talk again sometime. Peace and lov
 We'll have to find out.
 23 How so?
 
+28
+Well? What do you want?
+0 Nothing. My bad, sorry.
+29 Pete said he had a crush on you.
+32 I can't believe John and Pete won't let you put your songs on an album.
 
+29
+Pete? You're joking right? Pete is way too cute to be into me.
+30 Yeah, haha, I was just kidding.
+41 No, for real, he told me.
+
+30
+Ah, fair enough.
+0 Bye
+
+31
+Really? You know, I don't want to admit it, but I kinda like him too. Thanks for telling me.
+0 Any time.
+
+32
+I can't believe it either. Makes my guitar gently weep.
+34 That's really poetic, you know that?
+33 Ugh, I can see why they don't let you have any songs.
+
+33
+Well, who asked you anyways?
+0 Bye
+29 Pete likes you though, you know.
+
+34
+What can I say, I'm a poetic guy.
+35 Out of curiosity, who is your favorite Beeble?
+
+35
+Who is yours?
+36 John
+37 Pete
+38 You
+39 Richard
+
+36
+Well, yeah, he is pretty popular, I can agree with you there
+40 Anyways, I gotta go.
+
+37
+Ugh yeah. Pete is really cute, but he thinks I'm too boring.
+29 No way, Pete said he liked you!
+40 Really? Well, I gotta go.
+
+38
+Wow, that's flattering, but let's be serious now.
+36 John
+37 Pete
+39 Richard
+
+39
+Yeah, Rich can always make me laugh.
+40 True, I think I'm gonna go talk with him.
+
+40
+Well, nice talking with you.
+0 Bye
+
+41
+No way. I don't believe you.
+31 He loves you, yeah, yeah, yeah.
+30 Yeah, you got me. Just kidding.
