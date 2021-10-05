@@ -56,6 +56,10 @@ struct PlayMode : Mode {
 	int dialog_state;
 	int response_selection;
 
+	float textTimer;
+	float drawSpeed = 30.f;
+	bool drawing_done = false;
+
 	//music coming from the tip of the leg (as a demonstration):
 	//std::shared_ptr< Sound::PlayingSample > leg_tip_loop;
 
@@ -86,13 +90,6 @@ struct PlayMode : Mode {
 	std::string maintext;
 	std::vector<std::string> choice_text;
 	std::map<FT_ULong, Character> Characters;
-
-	//text vars
-	float typing_speed = .025f;
-	float text_timer = 0;
-	uint32_t curr_text_len = 0;
-	uint32_t total_text_len = 0;
-	bool finished_typing = false;
 
 	//Buffer used to hold vertex data during drawing:
 	GLuint vertex_buffer = 0;

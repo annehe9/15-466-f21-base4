@@ -237,6 +237,9 @@ void PlayMode::transition(int new_state) {
 	dialog_state = new_state;
 
 	response_selection = 0;
+
+	textTimer = 0.f;
+	drawing_done = false;
 	
 	hb_buffer_reset(buf); 
 	hb_buffer_add_utf8(buf, dialog_tree[dialog_state].line.c_str(), -1, 0, -1);
@@ -279,16 +282,17 @@ void PlayMode::update(float elapsed) {
 	down.pressed = false;
 	enter.pressed = false;
 
-	/*
-	if (!finished_typing) {
-		text_timer += elapsed;
-		curr_text_len = (unsigned int)std::floor(text_timer / typing_speed);
-		if (text_len >= total_text_len) {
-			finished_typing = true;
-			curr_text_len = total_text_len;
-		}
+	// Slowly draw in the text
+	if(!drawing_done) {
+		textTimer += elapsed * drawSpeed;
+		int substring = (int)textTimer;
+
+		hb_buffer_reset(buf); 
+		hb_buffer_add_utf8(buf, dialog_tree[dialog_state].line.substr(0, substring).c_str(), -1, 0, -1);
+		hb_shape(hb_font, buf, NULL, 0);
+
+		drawing_done = substring >= current_dialog.line.size();
 	}
-	*/
 }
 
 void PlayMode::draw(glm::uvec2 const &drawable_size) {
@@ -306,23 +310,19 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 	//don't use the depth test:
 	glDisable(GL_DEPTH_TEST);
 
-	//scene.draw(*camera);
 
-	//instead of 14 pass in curr_text_len
-	//text buffer, width of box, x, y, scale, text length, color
-	//buf = hb_buffer_create();
-	//hb_buffer_add_utf8(buf, dialog_tree[dialog_state].line, -1, 0, -1);
-
-
+	// Draw the text
 	float y = 200.0f;
 	render_text(buf, 950.0f, 100.f, y, 1.0f, 14, glm::vec3(1.0f,1.0f,1.0f));
 	y -= 32.f;
 
-	for(int i = 0; i < response_cnt; i++) {
-		y -= 32.f;
-		glm::vec3 color(i == response_selection ? 1.0f : 0.75f);
+	if(drawing_done) {
+		for(int i = 0; i < response_cnt; i++) {
+			y -= 32.f;
+			glm::vec3 color(i == response_selection ? 1.0f : 0.75f);
 
-		render_text(response_bufs[i], 950.0f, 150.f, y, 1.0f, 14, color);
+			render_text(response_bufs[i], 950.0f, 150.f, y, 1.0f, 14, color);
+		}
 	}
 
 	GL_ERRORS();
